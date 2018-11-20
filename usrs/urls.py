@@ -30,6 +30,16 @@ urlpatterns = [
     # ),
     url(r'^add/$', views.file_add, name='book.add'),
     url(
+        r'^add/edit/(?P<pk>\d+)/$',
+        UpdateView.as_view(
+            model=Book,
+            form_class=BookForm,
+            template_name='usrs/file_add.html',
+            success_url=reverse_lazy('model_files:your_page')
+        ),
+        name='book.adedit'
+    ),
+    url(
         r'^edit/(?P<pk>\d+)/$',
         UpdateView.as_view(
             model=Book,

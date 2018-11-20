@@ -15,7 +15,7 @@ from django.core.exceptions import NON_FIELD_ERRORS
 class BookForm(forms.ModelForm):
     class Meta(object):
         model = Book
-        exclude = []
+        exclude = ['md5s','ownr']
         widgets = {
             'index': DBClearableFileInput,
 #            'pages': DBClearableFileInput,
@@ -33,14 +33,19 @@ class BookForm(forms.ModelForm):
     #         # else:
     #             # raise forms.ValidationError(index)
     #     return cleaned_data
-    def validate_unique(self):
-        exclude = self._get_validation_exclusions()
-        # exclude.remove('name')
-        # exclude.remove('ownr')
-        try:
-            self.instance.validate_unique(exclude=exclude)
-        except ValidationError:
-        	raise ValidationError('Bro please change it:')
+    # def fun():
+    # 	self.cleaned_data['name']=self.cleaned_data['name']+"1"
+
+    # def validate_unique(self):
+    #     exclude = self._get_validation_exclusions()
+    #     # exclude.remove('index')
+    #     # exclude.remove('ownr')
+    #     try:
+    #         self.instance.validate_unique(exclude=exclude)
+    #     except ValidationError as e:
+    #     	self._update_errors(e)
+            
+            # raise ValidationError('Bro please change it:')
         	# self.delete
         	# self.save
         # except IntegrityError:
@@ -50,17 +55,17 @@ class BookForm(forms.ModelForm):
             #            'Same exists dude',
             #         ],
             #     }
-            # )
-    def save(self , commit=True):
-        instance=super(BookForm,self).save(commit=False)
-        if commit:
-            cleaned_data = super(BookForm,self).clean()
-            name=self.cleaned_data['name']
-            ownr=self.cleaned_data['ownr']
-            # if Book.objects.filter(name=name,ownr=ownr):
-            return redirect('model_files:book.delete',kwargs={'pk': Book.objects.filter(name=name,ownr=ownr).first().pk})
-            # instance.save()
-        return instance
+    #         # )
+    # def save(self , commit=True):
+    #     instance=super(BookForm,self).save(commit=False)
+    #     if commit:
+    #         cleaned_data = super(BookForm,self).clean()
+    #         name=self.cleaned_data['name']
+    #         ownr=self.cleaned_data['ownr']
+    #         # if Book.objects.filter(name=name,ownr=ownr):
+    #         return redirect('model_files:book.delete',kwargs={'pk': Book.objects.filter(name=name,ownr=ownr).first().pk})
+    #         # instance.save()
+    #     return instance
     # def delete:
 
 
