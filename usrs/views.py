@@ -6,6 +6,7 @@ from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ValidationError
 import hashlib
 from functools import partial
+from django.db import transaction , IntegrityError
 def home(request):
     return render(request, 'home.html')
 # @login_required
@@ -21,22 +22,41 @@ def home(request):
 #     else:
 #         form = BookForm()
 #     return render(request, 'usrs/file_add.html', {'form': form})
+@transaction.non_atomic_requests
 def file_add(request):
 	if request.user.is_authenticated:
 		user = request.user
-		if request.method == 'POST':
-			form = BookForm(request.POST,request.FILES)
+		if request.method == 'POST':			
+			form = BookForm(request.POST,request.FILES)			
 			if form.is_valid():
-				book = form.save(commit=False)
-				book.ownr = user
-				# book.md5s=md5sum(request.FILES)
-				f=book.save()
-			if f:
-				return redirect('model_files:your_page')
+				try:
+					with transaction.atomic():
+						key = form.cleaned_data.get('encpt_key')
+						scm = form.cleaned_data.get('en_schm')
+						shr = form.cleaned_data.get('sharing')
+						ls=str(shr).split()
+						book = form.save(commit=False)
+						book.ownr = user
+						book.it(key,scm)
+						f=book.save()
+						for el in ls:
+							if User.objects.filter(username=el):
+								# raise ValidationError("hi")
+								ss=User.objects.get(username=el)
+								# raise ValidationError(ss.username)
+								book.sharedwith.add(ss)
+								book.save()
+						
+				except IntegrityError:
+					raise forms.ValidationError("Ongoing sunc in some other client.")
+				if f:
+					return redirect('model_files:your_page')
+				else:
+					sd=Book.objects.get(name=book.name,ownr=book.ownr)
+					return redirect(sd.get_absolute_url())
 			else:
-				sd=Book.objects.get(name=book.name,ownr=book.ownr)
-				return redirect(sd.get_absolute_url())
-
+				# raise ValidationError(form.errors)
+				return redirect('model_files:your_page')
 		else:
 			form = BookForm()
 			return render(request, 'usrs/file_add.html', {'form': form})
@@ -68,7 +88,9 @@ def file_add(request):
 	    
 @login_required
 def file_view(request):
+	dfg = Book.objects.filter(sharedwith=request.user)
 	user = request.user.files.all()
+	al = user | dfg
 	# fls = user.order_by('created_at').first()
 	# for fls in user:
 	# 	i=fls.book_pk;
@@ -78,7 +100,7 @@ def file_view(request):
 	# 		# bks="asdasd"
 	# 		sd.md5s=hashlib.md5((bks.bytes).encode()).hexdigest()
 	# 		sd.save()
-	return render(request, 'usrs/file_list.html', {'files': user})
+	return render(request, 'usrs/file_list.html', {'files': al})
 
 
 # def md5sum(filename):

@@ -38,8 +38,11 @@ class Book(models.Model):
     md5s = models.CharField(max_length=100,null=True)
     index = models.FileField(
         upload_to='usrs.BookIndex/bytes/filename/mimetype',
-        blank=True, null=True
+        blank=False, null=True
     )
+    sharedwith = models.ManyToManyField(User)
+    key=None
+    scm=None
     class Meta:
         unique_together = ("name","ownr","md5s")
 #    pages = models.FileField(
@@ -80,6 +83,7 @@ class Book(models.Model):
             for chunk in self.index.chunks():
                 md5.update(chunk)
             self.md5s = md5.hexdigest()
+
 #        delete_file_if_needed(self, 'pages')
         # else:
         # try:
@@ -87,12 +91,12 @@ class Book(models.Model):
         # except:
         if Book.objects.filter(name=self.name,ownr=self.ownr):
             sd=Book.objects.get(name=self.name,ownr=self.ownr)
-            if sd:
+
                 
-                if sd.md5s!=self.md5s:
-                    return False
-                else:
-                    return True
+            if sd.md5s!=self.md5s:
+                return False
+            else:
+                return True
                     # raise ValidationError(self.md5s)
                     # return redirect('model_files:book.edit', kwargs={'pk': sd.pk})
         else:
@@ -100,7 +104,9 @@ class Book(models.Model):
             return True
             
 
-
+    def it(self,k,s):
+        self.key=k
+        self.scm=s
     def delete(self, *args, **kwargs):
         super(Book, self).delete(*args, **kwargs)
         delete_file(self, 'index')

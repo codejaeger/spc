@@ -12,15 +12,33 @@ from django.core.exceptions import ValidationError
 from django.db import IntegrityError
 from django.core.exceptions import NON_FIELD_ERRORS
 
-class BookForm(forms.ModelForm):
+class ProfileBookForm(forms.ModelForm):
+    class Meta:
+        model = Book
+        # exclude = ['md5s','ownr']
+        fields = ['name','index',]
+        
+
+
+class BookForm(ProfileBookForm):
+    encpt_key = forms.CharField(max_length=500)
+    en_schm = forms.CharField(max_length=50)
+    sharing = forms.CharField(max_length=500)
     class Meta(object):
         model = Book
-        exclude = ['md5s','ownr']
+        fields = ProfileBookForm.Meta.fields + ['encpt_key','en_schm','sharing',]
         widgets = {
             'index': DBClearableFileInput,
 #            'pages': DBClearableFileInput,
 #            'cover': DBClearableFileInput,
         }
+        # exclude = ['md5s','ownr']
+        
+        # def clean(self):
+        #     cleaned_data = super(BookForm, self).clean()
+        #     if 'index' in self.errors:
+        #         del self.errors['index']
+        #     return cleaned_data
     # def clean(self):
     #     cleaned_data = super(BookForm,self).clean()
     #     name=self.cleaned_data['name']
