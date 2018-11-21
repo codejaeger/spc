@@ -3,7 +3,8 @@ import os
 import pickle
 import shutil
 from bs4 import BeautifulSoup
-import html 
+import html , subprocess
+import hashlib
 
 myfile = 'login_details.txt'
 if os.path.isfile(myfile) == False:
@@ -45,6 +46,7 @@ with open(myfile, 'rb') as fs:
 print(url)
 
 l = []
+inputd={}
 
 fname = 'directory_path.txt'
 with open(fname, 'rb') as fs:
@@ -56,7 +58,11 @@ print(directory)
 with open(upload_file, 'rb') as fs:
     upload_url = fs.read().decode('ascii')
 
-inputd = {}
+# file = 'encodedmd5.pickle'
+# with open(file,'wb') as fw:
+#     inputd = pickle.load(fw)
+
+md5 = {}
 def fillinputd():
     for (dirpath, dirnames, filenames) in os.walk(directory):
         print(filenames)
@@ -67,6 +73,11 @@ def fillinputd():
                 relFile = os.path.join(reldir, filename)
             else:
                 relFile = filename
+            hash_md5 = hashlib.md5()
+            with open(relFile, "rb") as f:
+                for chunk in iter(lambda: f.read(4096), b""):
+                    hash_md5.update(chunk)
+                md5[relFile] = hash_md5.hexdigest()
             if filename[0]!='.':
                 inputd[relFile]=0
 
@@ -75,8 +86,8 @@ def sync():
     client = requests.session()
     with open('somefile', 'rb') as f:
         client.cookies.update(pickle.load(f))
-    u = 'sed4'
-    p = 'Shubham123'
+    u = 'sed5'
+    p = 'A123456!'
     client.auth = (u,p)
     client.headers.update({'x-test': 'true'})
     # g = client.get(upload_url,cookies=client.cookies, headers={'x-test2': 'true'})
@@ -89,28 +100,33 @@ def sync():
     soup = BeautifulSoup(r.content,features="html.parser")
     # print(1)
     tables = soup.findChildren('table')
-    # print(2)
-    # print(tables)
-    my_table = tables[0]
-    # print(3)
-    # print(my_table)
-    rows = my_table.findChildren('tr')
-    # print(4)
-    # print(rows)
-    for row in rows:
-     # print(row)
-     cells = row.findChildren('td')
-     k1 = cells[0].find('a').contents[0]
-     k2 = cells[1].find('a')['href']
-     # p = k2[0].find('a',href=True)
-     print(cells[1].find('a'))
-     print(k1)
-     print(k2)
-     print("")
-     temp = []
-     temp.append(k1)
-     temp.append(k2)
-     l.append(temp)
+    if len(tables)!=0:
+        # print(2)
+        # print(tables)
+        my_table = tables[0]
+        # print(3)
+        # print(my_table)
+        rows = my_table.findChildren('tr')
+        # print(4)
+        # print(rows)
+        for row in rows:
+         # print(row)
+         cells = row.findChildren('td')
+         k1 = cells[0].find('a').contents[0]
+         k2 = cells[1].find('a')['href']
+         k3 = cells[4].text
+         k3 = k3[1:-1]
+         # p = k2[0].find('a',href=True)
+         print(cells[1].find('a'))
+         print(k1)
+         # print(k2)
+         print(k3)
+         print("")
+         temp = []
+         temp.append(k1)
+         temp.append(k2)
+         temp.append(k3)
+         l.append(temp)
 
 def download():
     for item in l:
@@ -118,40 +134,94 @@ def download():
             client = requests.session()
             with open('somefile', 'rb') as f:
                 client.cookies.update(pickle.load(f))
-            u = 'sed4'
-            p = 'Shubham123'
+            u = 'sed5'
+            p = 'A123456!'
             client.auth = (u,p)
             client.headers.update({'x-test': 'true'})
             # g = client.get(upload_url,cookies=client.cookies, headers={'x-test2': 'true'})
             # client.get(upload_url)
             # csrftoken = client.cookies['csrftoken']
             csrftoken = client.cookies['csrftoken']
-            values = {'username': 'sed4','csrfmiddlewaretoken': csrftoken,'password': 'Shubham123', 'deb': 1}    
-            t = client.post("http://127.0.0.1:8000"+item[1], data=values)
-            with open(item[0],'wb') as f:
+            values = {'username': 'sed5','csrfmiddlewaretoken': csrftoken,'password': 'A123456!', 'check1': 1}    
+            t = client.post("http://10.42.0.133:8000"+item[1], data=values)
+            print(item[0])
+            with open(item[0]+'.gpg','wb') as f:
                 f.write(t.content)
+                f.close()
+            subprocess.call(['gpg', '--yes', '--batch', '--passphrase="a"', item[0]+'.gpg'])
+            subprocess.call(['rm', item[0]+'.gpg'])
         else:
-            inputd[item[0]] = 1
+            print(type(md5[item[0]]))
+            print(type(item[2]))
+            print(md5[item[0]])
+            print(len(item[2]))
+            if md5[item[0]] == item[2]:
+                inputd[item[0]] = 1
+            else:
+                print('File with name'+ item[0] + 'exist both on server and client' )
+                print('If you want to keep both files, then terminate the sync process and change file name')
+                print('Warning : If you continue then one file content name are lost')
+                print('S(For overloading your file with server file)')
+                print('C(For overloading server file with your file)')
+                k = input()
+                if k == 'S':
+                    inputd[item[0]] = 1
+                    client = requests.session()
+                    os.remove(item[0])
+                    with open('somefile', 'rb') as f:
+                        client.cookies.update(pickle.load(f))
+                    u = 'sed5'
+                    p = 'A123456!'
+                    client.auth = (u,p)
+                    client.headers.update({'x-test': 'true'})
+                    # g = client.get(upload_url,cookies=client.cookies, headers={'x-test2': 'true'})
+                    # client.get(upload_url)
+                    # csrftoken = client.cookies['csrftoken']
+                    csrftoken = client.cookies['csrftoken']
+                    values = {'username': 'sed5','csrfmiddlewaretoken': csrftoken,'password': 'A123456!', 'deb': 1}    
+                    t = client.post("http://10.42.0.133:8000"+item[1], data=values)
+                    print(item[0])
+                    with open(item[0]+'.gpg','wb') as f:
+                        f.write(t.content)
+                        f.close()
+                    subprocess.call(['gpg', '--yes', '--batch', '--passphrase="a"', item[0]+'.gpg'])
+                    subprocess.call(['rm', item[0]+'.gpg'])
+                elif k != 'C':
+                    print('The option you entered is invalid')
+                    exit(0)
+
+
+
 
 def upload():
     for key,values in inputd.items():
-        if values == 0:
+        if values == 0:           
             client = requests.session()
             with open('somefile', 'rb') as f:
                 client.cookies.update(pickle.load(f))
-            u = 'sed4'
-            p = 'Shubham123'
+            u = 'sed5'
+            p = 'A123456!'
             client.auth = (u,p)
             client.headers.update({'x-test': 'true'})
             # g = client.get(upload_url,cookies=client.cookies, headers={'x-test2': 'true'})
             # client.get(upload_url)
             # csrftoken = client.cookies['csrftoken']
             csrftoken = client.cookies['csrftoken']
-            files = {'index': open(key,'rb')}
-            values = {'ownr': 1, 'name': key,'md5s': 'vsdhabhja', 'username': 'sed4','csrfmiddlewaretoken': csrftoken,'password': 'Shubham123', 'deb': 1}    
+            print(key)
+            subprocess.call(['gpg', '--yes', '--batch', '--passphrase="a"', '-c', key])
+            hash_md5 = hashlib.md5()
+            with open(key+'.gpg', "rb") as f:
+                for chunk in iter(lambda: f.read(4096), b""):
+                    hash_md5.update(chunk)
+            temp = hash_md5.hexdigest()
+            print(temp)
+            print(len(temp))
+            files = {'index': open(key+'.gpg','rb')}
+            values = {'ownr': 4,'encpt_key': 'wvdehj','md5se':temp ,'en_schm':"dsf",'sharing': 'sdfs', 'name': key,'md5so': md5[key], 'username': 'sed5','csrfmiddlewaretoken': csrftoken,'password': 'A123456!', 'check1': 1}    
             r = client.post(upload_url, files=files, data=values)
-
-
+            subprocess.call(['rm', key+'.gpg'])
+# def md5_sum()
+   
 fillinputd()
 print(inputd)
 sync()
@@ -160,68 +230,68 @@ download()
 upload()
 
 
-def upload_file(filename):
-    if os.path.isfile(filename) == False:
-        print("No such file exist")
-        print("Terminating")
-        exit(0)
-    client = requests.session()
-    with open('somefile', 'rb') as f:
-        client.cookies.update(pickle.load(f))
-    u = 'sed4'
-    p = 'Shubham123'
-    client.auth = (u,p)
-    client.headers.update({'x-test': 'true'})
-    # g = client.get(upload_url,cookies=client.cookies, headers={'x-test2': 'true'})
-    # client.get(upload_url)
-    # csrftoken = client.cookies['csrftoken']
-    csrftoken = client.cookies['csrftoken']
-    files = {'index': open(filename,'rb')}
-    values = {'ownr': 1, 'name': filename,'md5s': 'vsdhabhja', 'username': 'sed4','csrfmiddlewaretoken': csrftoken,'password': 'Shubham123', 'deb': 1}
-    t = client.post(durl, data=values)
+# def upload_file(filename):
+#     if os.path.isfile(filename) == False:
+#         print("No such file exist")
+#         print("Terminating")
+#         exit(0)
+#     client = requests.session()
+#     with open('somefile', 'rb') as f:
+#         client.cookies.update(pickle.load(f))
+#     u = 'sed4'
+#     p = 'A123456!'
+#     client.auth = (u,p)
+#     client.headers.update({'x-test': 'true'})
+#     # g = client.get(upload_url,cookies=client.cookies, headers={'x-test2': 'true'})
+#     # client.get(upload_url)
+#     # csrftoken = client.cookies['csrftoken']
+#     csrftoken = client.cookies['csrftoken']
+#     files = {'index': open(filename,'rb')}
+#     values = {'ownr': 4, 'name': filename,'md5s': 'vsdhabhja', 'username': 'sed4','csrfmiddlewaretoken': csrftoken,'password': 'A123456!', 'deb': 1}
+#     t = client.post(durl, data=values)
 
-    with open("dow_file",'wb') as f:
-        f.write(t.content)
+#     with open("dow_file",'wb') as f:
+#         f.write(t.content)
 
-    r = client.post(upload_url, files=files, data=values)
-    # print(r.status_code)
-    soup = BeautifulSoup(r.content,features="html.parser")
-    # print(1)
-    tables = soup.findChildren('table')
-    # print(2)
-    # print(tables)
-    my_table = tables[0]
-    # print(3)
-    # print(my_table)
-    rows = my_table.findChildren('tr')
-    # print(4)
-    # print(rows)
-    for row in rows:
-     # print(row)
-     cells = row.findChildren('td')
-     k1 = cells[0].find('a').contents[0]
-     k2 = cells[1].find('a')['href']
-     # p = k2[0].find('a',href=True)
-     print(k1)
-     print(k2)
-     print("")
-     temp = []
-     temp.append(k1)
-     temp.append(k2)
-     l.append(temp)
-    print(r.content)
-    if r.status_code == 200:
-        print("Uploaded file successfully")
-    else:
-        print("Some error ocurred while uploading file")
+#     r = client.post(upload_url, files=files, data=values)
+#     # print(r.status_code)
+#     soup = BeautifulSoup(r.content,features="html.parser")
+#     # print(1)
+#     tables = soup.findChildren('table')
+#     # print(2)
+#     # print(tables)
+#     my_table = tables[0]
+#     # print(3)
+#     # print(my_table)
+#     rows = my_table.findChildren('tr')
+#     # print(4)
+#     # print(rows)
+#     for row in rows:
+#      # print(row)
+#      cells = row.findChildren('td')
+#      k1 = cells[0].find('a').contents[0]
+#      k2 = cells[1].find('a')['href']
+#      # p = k2[0].find('a',href=True)
+#      print(k1)
+#      print(k2)
+#      print("")
+#      temp = []
+#      temp.append(k1)
+#      temp.append(k2)
+#      l.append(temp)
+#     print(r.content)
+#     if r.status_code == 200:
+#         print("Uploaded file successfully")
+#     else:
+#         print("Some error ocurred while uploading file")
 
-def upload_directory():
-    for filename in os.listdir(directory):
-        filename = directory + filename
-        print(filename)
-        upload_file(filename)
+# def upload_directory():
+#     for filename in os.listdir(directory):
+#         filename = directory + filename
+#         print(filename)
+#         upload_file(filename)
 
-directory_path = 'directory_path.txt'
+# directory_path = 'directory_path.txt'
 
 # if os.path.isfile(directory_path):
 #     print("If you want to upload all files in your observing directory, enter 1")
