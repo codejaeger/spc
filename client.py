@@ -6,7 +6,8 @@ from bs4 import BeautifulSoup
 import html , subprocess
 import hashlib
 
-myfile = 'login_details.txt'
+myfile = os.path.expanduser('~/login_details.pkl')
+
 if os.path.isfile(myfile) == False:
     print("You must login for performing this action")
     exit(0)
@@ -36,31 +37,50 @@ if os.path.isfile(myfile) == False:
 # print(r1.url)
 
 with open(myfile, 'rb') as fs:
-    count = 1
-    for line in fs:
-        if count == 3 :
-            url = line.decode('ascii')
-        else:
-            count+=1;
+    u,p,url = pickle.load(fs)
 
 print(url)
+slashparts = url.split('/')
+basename = '/'.join(slashparts[:3])
 
 l = []
 inputd={}
 
-fname = 'directory_path.txt'
+fname = os.path.expanduser('~/directory_path.pkl')
 with open(fname, 'rb') as fs:
-    directory = fs.read().decode('ascii')
+    directory = pickle.load(fs)
 
-upload_file = 'upload_file.txt'
+upload_file = os.path.expanduser('~/upload_file.pkl')
 
 print(directory)
 with open(upload_file, 'rb') as fs:
-    upload_url = fs.read().decode('ascii')
+    upload_url = pickle.load(fs)
+
+encr_file = os.path.expanduser('~/encryption_scheme.pkl')
+with open(encr_file, 'rb') as fs:
+    a = pickle.load(fs)
+
+sch = a[0]
+if sch == 'AES':
+    passcode = a[1]
+
+old_encr = os.path.expanduser('~/old_encryption_scheme.pkl')
+try:
+    os.path.isfile(old_encr)
+    with open(old_encr, 'rb') as fs:
+        a = pickle.load(fs)
+    osch = a[0]
+    if osch == 'AES':
+        opasscode = a[1]
+except:
+    print('')
+    
+
+
 
 # file = 'encodedmd5.pickle'
 # with open(file,'wb') as fw:
-#     inputd = pickle.load(fw)
+# inputd = pickle.load(fw)
 
 md5 = {}
 def fillinputd():
@@ -74,20 +94,20 @@ def fillinputd():
             else:
                 relFile = filename
             hash_md5 = hashlib.md5()
-            with open(relFile, "rb") as f:
+            full_name = directory + relFile
+            with open(full_name, "rb") as f:
                 for chunk in iter(lambda: f.read(4096), b""):
                     hash_md5.update(chunk)
-                md5[relFile] = hash_md5.hexdigest()
+            md5[relFile] = hash_md5.hexdigest()
             if filename[0]!='.':
                 inputd[relFile]=0
 
     
 def sync():
     client = requests.session()
-    with open('somefile', 'rb') as f:
+    k = os.path.expanduser('~/somefile.pkl')
+    with open(k, 'rb') as f:
         client.cookies.update(pickle.load(f))
-    u = 'sed5'
-    p = 'A123456!'
     client.auth = (u,p)
     client.headers.update({'x-test': 'true'})
     # g = client.get(upload_url,cookies=client.cookies, headers={'x-test2': 'true'})
@@ -130,62 +150,96 @@ def sync():
 
 def download():
     for item in l:
-        if os.path.isfile(item[0]) == False:
+        full_name = directory + item[0]
+        if os.path.isfile(full_name) == False:
             client = requests.session()
-            with open('somefile', 'rb') as f:
+            k = os.path.expanduser('~/somefile.pkl')
+            with open(k, 'rb') as f:
                 client.cookies.update(pickle.load(f))
-            u = 'sed5'
-            p = 'A123456!'
             client.auth = (u,p)
             client.headers.update({'x-test': 'true'})
             # g = client.get(upload_url,cookies=client.cookies, headers={'x-test2': 'true'})
             # client.get(upload_url)
             # csrftoken = client.cookies['csrftoken']
             csrftoken = client.cookies['csrftoken']
-            values = {'username': 'sed5','csrfmiddlewaretoken': csrftoken,'password': 'A123456!', 'check1': 1}    
-            t = client.post("http://10.42.0.133:8000"+item[1], data=values)
+            values = {'username': u,'csrfmiddlewaretoken': csrftoken,'password': p, 'check1': 1}    
+            t = client.post(basename+item[1], data=values)
             print(item[0])
-            with open(item[0]+'.gpg','wb') as f:
+            if sch == 'AES':
+                end = '.gpg'
+            with open(full_name+end,'wb') as f:
                 f.write(t.content)
-                f.close()
-            subprocess.call(['gpg', '--yes', '--batch', '--passphrase="a"', item[0]+'.gpg'])
-            subprocess.call(['rm', item[0]+'.gpg'])
+            if sch == 'AES':
+                print(full_name+end)
+                subprocess.call(['gpg', '--yes', '--batch', '--passphrase="passcode"', full_name+end])
+                # subprocess.call(['rm', full_name+end])
+            hash_md5 = hashlib.md5()
+            with open(full_name, "rb") as f:
+                for chunk in iter(lambda: f.read(4096), b""):
+                    hash_md5.update(chunk)
+            temp = hash_md5.hexdigest()
+            if temp != item[2]:
+                print("File " + item[0] + " got corrupted while downloading")
+                print("Please download it again") 
         else:
             print(type(md5[item[0]]))
             print(type(item[2]))
             print(md5[item[0]])
             print(len(item[2]))
-            if md5[item[0]] == item[2]:
+            if md5[item[0]] == item[2] and os.path.isfile(old_encr)==False:
                 inputd[item[0]] = 1
             else:
-                print('File with name'+ item[0] + 'exist both on server and client' )
-                print('If you want to keep both files, then terminate the sync process and change file name')
-                print('Warning : If you continue then one file content name are lost')
-                print('S(For overloading your file with server file)')
-                print('C(For overloading server file with your file)')
-                k = input()
+                if os.path.isfile(old_encr)==True:
+                    k = 'S'
+                else:
+                    print('File with name '+ full_name + ' exist both on server and client' )
+                    print('If you want to keep both files, then terminate the sync process and change file name')
+                    print('Warning : If you continue then one of the file content is lost')
+                    print('Type S(For overloading your file with server file)')
+                    print('Type C(For overloading server file with your file)')
+                    k = input()
                 if k == 'S':
-                    inputd[item[0]] = 1
+                    if os.path.isfile(old_encr)==False:
+                        inputd[item[0]] = 1
                     client = requests.session()
-                    os.remove(item[0])
-                    with open('somefile', 'rb') as f:
+                    os.remove(full_name)
+                    k = os.path.expanduser('~/somefile.pkl')
+                    with open(k, 'rb') as f:
                         client.cookies.update(pickle.load(f))
-                    u = 'sed5'
-                    p = 'A123456!'
                     client.auth = (u,p)
                     client.headers.update({'x-test': 'true'})
                     # g = client.get(upload_url,cookies=client.cookies, headers={'x-test2': 'true'})
                     # client.get(upload_url)
                     # csrftoken = client.cookies['csrftoken']
                     csrftoken = client.cookies['csrftoken']
-                    values = {'username': 'sed5','csrfmiddlewaretoken': csrftoken,'password': 'A123456!', 'deb': 1}    
-                    t = client.post("http://10.42.0.133:8000"+item[1], data=values)
+                    values = {'username': u,'csrfmiddlewaretoken': csrftoken,'password': p, 'check1': 1}    
+                    t = client.post(basename+item[1], data=values)
                     print(item[0])
-                    with open(item[0]+'.gpg','wb') as f:
+                    if os.path.isfile(old_encr)==False:
+                        if sch == 'AES':
+                            end = '.gpg'
+                    else:
+                        if osch == 'AES':
+                            end = '.gpg'
+                    with open(full_name+end,'wb') as f:
                         f.write(t.content)
                         f.close()
-                    subprocess.call(['gpg', '--yes', '--batch', '--passphrase="a"', item[0]+'.gpg'])
-                    subprocess.call(['rm', item[0]+'.gpg'])
+                    if os.path.isfile(old_encr)==False:
+                        if sch == 'AES':
+                            subprocess.call(['gpg', '--yes', '--batch', '--passphrase=passcode', full_name+end])
+                            subprocess.call(['rm', full_name+'.gpg'])
+                    else:
+                        if osch == 'AES':
+                            subprocess.call(['gpg', '--yes', '--batch', '--passphrase=opasscode', full_name+end])
+                            subprocess.call(['rm', full_name+'.gpg'])
+                    hash_md5 = hashlib.md5()
+                    with open(full_name, "rb") as f:
+                        for chunk in iter(lambda: f.read(4096), b""):
+                            hash_md5.update(chunk)
+                    temp = hash_md5.hexdigest()
+                    if temp != item[2]:
+                        print("File " + item[0] + " got corrupted while downloading")
+                        print("Please download it again")
                 elif k != 'C':
                     print('The option you entered is invalid')
                     exit(0)
@@ -197,29 +251,31 @@ def upload():
     for key,values in inputd.items():
         if values == 0:           
             client = requests.session()
-            with open('somefile', 'rb') as f:
+            k = os.path.expanduser('~/somefile.pkl')
+            with open(k, 'rb') as f:
                 client.cookies.update(pickle.load(f))
-            u = 'sed5'
-            p = 'A123456!'
             client.auth = (u,p)
             client.headers.update({'x-test': 'true'})
             # g = client.get(upload_url,cookies=client.cookies, headers={'x-test2': 'true'})
             # client.get(upload_url)
             # csrftoken = client.cookies['csrftoken']
             csrftoken = client.cookies['csrftoken']
+            key1 = directory + key
             print(key)
-            subprocess.call(['gpg', '--yes', '--batch', '--passphrase="a"', '-c', key])
+            if sch == 'AES':
+                end = '.gpg'
+                subprocess.call(['gpg', '--yes', '--batch', '--passphrase=passcode', '-c', key1])
             hash_md5 = hashlib.md5()
-            with open(key+'.gpg', "rb") as f:
+            with open(key1+end, "rb") as f:
                 for chunk in iter(lambda: f.read(4096), b""):
                     hash_md5.update(chunk)
             temp = hash_md5.hexdigest()
             print(temp)
             print(len(temp))
-            files = {'index': open(key+'.gpg','rb')}
-            values = {'ownr': 4,'encpt_key': 'wvdehj','md5se':temp ,'en_schm':"dsf",'sharing': 'sdfs', 'name': key,'md5so': md5[key], 'username': 'sed5','csrfmiddlewaretoken': csrftoken,'password': 'A123456!', 'check1': 1}    
+            files = {'index': open(key1+end,'rb')}
+            values = {'encpt_key': 'wvdehj','md5se':temp ,'en_schm':"dsf",'sharing': 'sdfs', 'name': key,'md5so': md5[key], 'username': u,'csrfmiddlewaretoken': csrftoken,'password': p, 'check1': 1}    
             r = client.post(upload_url, files=files, data=values)
-            subprocess.call(['rm', key+'.gpg'])
+            subprocess.call(['rm', key1+end])
 # def md5_sum()
    
 fillinputd()
@@ -229,69 +285,8 @@ print(l)
 download()
 upload()
 
-
-# def upload_file(filename):
-#     if os.path.isfile(filename) == False:
-#         print("No such file exist")
-#         print("Terminating")
-#         exit(0)
-#     client = requests.session()
-#     with open('somefile', 'rb') as f:
-#         client.cookies.update(pickle.load(f))
-#     u = 'sed4'
-#     p = 'A123456!'
-#     client.auth = (u,p)
-#     client.headers.update({'x-test': 'true'})
-#     # g = client.get(upload_url,cookies=client.cookies, headers={'x-test2': 'true'})
-#     # client.get(upload_url)
-#     # csrftoken = client.cookies['csrftoken']
-#     csrftoken = client.cookies['csrftoken']
-#     files = {'index': open(filename,'rb')}
-#     values = {'ownr': 4, 'name': filename,'md5s': 'vsdhabhja', 'username': 'sed4','csrfmiddlewaretoken': csrftoken,'password': 'A123456!', 'deb': 1}
-#     t = client.post(durl, data=values)
-
-#     with open("dow_file",'wb') as f:
-#         f.write(t.content)
-
-#     r = client.post(upload_url, files=files, data=values)
-#     # print(r.status_code)
-#     soup = BeautifulSoup(r.content,features="html.parser")
-#     # print(1)
-#     tables = soup.findChildren('table')
-#     # print(2)
-#     # print(tables)
-#     my_table = tables[0]
-#     # print(3)
-#     # print(my_table)
-#     rows = my_table.findChildren('tr')
-#     # print(4)
-#     # print(rows)
-#     for row in rows:
-#      # print(row)
-#      cells = row.findChildren('td')
-#      k1 = cells[0].find('a').contents[0]
-#      k2 = cells[1].find('a')['href']
-#      # p = k2[0].find('a',href=True)
-#      print(k1)
-#      print(k2)
-#      print("")
-#      temp = []
-#      temp.append(k1)
-#      temp.append(k2)
-#      l.append(temp)
-#     print(r.content)
-#     if r.status_code == 200:
-#         print("Uploaded file successfully")
-#     else:
-#         print("Some error ocurred while uploading file")
-
-# def upload_directory():
-#     for filename in os.listdir(directory):
-#         filename = directory + filename
-#         print(filename)
-#         upload_file(filename)
-
-# directory_path = 'directory_path.txt'
+if os.path.isfile(old_encr)==True:
+    os.remove(old_encr)
 
 # if os.path.isfile(directory_path):
 #     print("If you want to upload all files in your observing directory, enter 1")

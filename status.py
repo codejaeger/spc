@@ -5,7 +5,7 @@ import shutil
 from bs4 import BeautifulSoup
 import html 
 
-myfile = 'login_details.txt'
+myfile = os.path.expanduser('~/login_details.pkl')
 if os.path.isfile(myfile) == False:
     print("You must login for performing this action")
     exit(0)
@@ -39,26 +39,21 @@ lin = []
 lco = []
 
 with open(myfile, 'rb') as fs:
-    count = 1
-    for line in fs:
-        if count == 3 :
-            url = line.decode('ascii')
-        else:
-            count+=1;
+    u,p,url = pickle.load(fs)
 
 print(url)
 
 l = []
 
-fname = 'directory_path.txt'
+fname = os.path.expanduser('~/directory_path.pkl')
 with open(fname, 'rb') as fs:
-    directory = fs.read().decode('ascii')
+    directory = pickle.load(fs)
 
-upload_file = 'upload_file.txt'
+upload_file = os.path.expanduser('~/upload_file.pkl')
 
 print(directory)
 with open(upload_file, 'rb') as fs:
-    upload_url = fs.read().decode('ascii')
+    upload_url = pickle.load(fs)
 
 inputd = {}
 def fillinputd():
@@ -71,16 +66,20 @@ def fillinputd():
                 relFile = os.path.join(reldir, filename)
             else:
                 relFile = filename
+            hash_md5 = hashlib.md5()
+            with open(relFile, "rb") as f:
+                for chunk in iter(lambda: f.read(4096), b""):
+                    hash_md5.update(chunk)
+            md5[relFile] = hash_md5.hexdigest()
             if filename[0]!='.':
                 inputd[relFile]=0
 
     
 def sync():
     client = requests.session()
-    with open('somefile', 'rb') as f:
+    k = os.path.expanduser('~/somefile.pkl')
+    with open(k, 'rb') as f:
         client.cookies.update(pickle.load(f))
-    u = 'sed4'
-    p = 'Shubham123'
     client.auth = (u,p)
     client.headers.update({'x-test': 'true'})
     # g = client.get(upload_url,cookies=client.cookies, headers={'x-test2': 'true'})
@@ -93,35 +92,43 @@ def sync():
     soup = BeautifulSoup(r.content,features="html.parser")
     # print(1)
     tables = soup.findChildren('table')
-    # print(2)
-    # print(tables)
-    my_table = tables[0]
-    # print(3)
-    # print(my_table)
-    rows = my_table.findChildren('tr')
-    # print(4)
-    # print(rows)
-    for row in rows:
-     # print(row)
-     cells = row.findChildren('td')
-     k1 = cells[0].find('a').contents[0]
-     k2 = cells[1].find('a')['href']
-     # p = k2[0].find('a',href=True)
-     print(cells[1].find('a'))
-     print(k1)
-     print(k2)
-     print("")
-     temp = []
-     temp.append(k1)
-     temp.append(k2)
-     l.append(temp)
+    if len(tables)!=0:
+        # print(2)
+        # print(tables)
+        my_table = tables[0]
+        # print(3)
+        # print(my_table)
+        rows = my_table.findChildren('tr')
+        # print(4)
+        # print(rows)
+        for row in rows:
+         # print(row)
+         cells = row.findChildren('td')
+         k1 = cells[0].find('a').contents[0]
+         k2 = cells[1].find('a')['href']
+         k3 = cells[4].text
+         k3 = k3[1:-1]
+         # p = k2[0].find('a',href=True)
+         print(cells[1].find('a'))
+         print(k1)
+         # print(k2)
+         print(k3)
+         print("")
+         temp = []
+         temp.append(k1)
+         temp.append(k2)
+         temp.append(k3)
+         l.append(temp)
 
 def fun():
     for item in l:
         if os.path.isfile(item[0]) == False:
             lse.append(item[0])
         else:
-            inputd[item[0]] = 1
+            if md5[item[0]] == item[2]:
+                inputd[item[0]] = 1
+            else:
+                lse.append(item[0])
     for key,values in inputd.items():
         if values == 0:
             lin.append(key)

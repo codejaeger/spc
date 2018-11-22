@@ -6,7 +6,12 @@ print(1)
 u = input("Enter username: ")
 p = input("Enter password: ")
 
-url = 'http://10.42.0.133:8000/login/'
+f = os.path.expanduser('~/server-url.pkl')
+with open(f,'rb') as fr:
+	ip = pickle.load(fr)
+
+url = 'http://'+ ip +'/login/'
+print(url)
 
 client = requests.session()
 client.auth = (u,p)
@@ -20,8 +25,11 @@ csrftoken = client.cookies['csrftoken']
 login_data = dict(username=u, password=p, csrfmiddlewaretoken=csrftoken)
 r = client.post(url, data=login_data)
 
-with open('somefile', 'wb') as f:
+k = os.path.expanduser('~/somefile.pkl')
+with open(k, 'wb') as f:
     pickle.dump(client.cookies, f)
+
+print(r.url)
 
 url = '%s%s%s'%(r.url[:-4],'fls',r.url[-1:])
 
@@ -33,8 +41,8 @@ print(url)
 # values = {'ownr': 3, 'name': 'abcd/b.txt', 'csrfmiddlewaretoken': csrftoken}
 # r = client.post(r.url, files=files, data=values)
 
-text_file = 'login_details.txt'
-upload_file = 'upload_file.txt'
+text_file = os.path.expanduser('~/login_details.pkl')
+upload_file = os.path.expanduser('~/upload_file.pkl')
 
 # values = {'username': u, 'password': p}
 # resp = requests.get(url,data=values)
@@ -72,12 +80,7 @@ if r.url == url and r.status_code == 200:
 	print("Wrong username or password")
 else:
 	with open(text_file, 'wb') as fw:
-	    fw.write(bytes(u, 'utf-8'))
-	    fw.write(bytes("\n", 'utf-8'))
-	    fw.write(bytes(p, 'utf-8'))
-	    fw.write(bytes("\n", 'utf-8'))
-	    fw.write(bytes(url, 'utf-8'))
-	    fw.close()
-	    print("login successful")
+		pickle.dump([u,p,url],fw)
 	with open(upload_file, 'wb') as fw:
-	    fw.write(bytes(r.url, 'utf-8'))
+	    pickle.dump(r.url, fw)
+	print("login successful")
