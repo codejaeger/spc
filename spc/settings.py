@@ -29,7 +29,7 @@ SECRET_KEY = '_veed1plh#&80u%t!_7_yy6s5$y#h8_li3)@6@8=_h9e+51yyw'
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['192.168.2.1','0.0.0.0','10.42.0.133','192.168.43.97','10.42.0.1','10.196.21.75','192.168.43.132']
+ALLOWED_HOSTS = ['192.168.2.1','0.0.0.0','10.42.0.133','192.168.43.132','10.42.0.1','10.196.21.75','192.168.43.97']
 
 
 # Application definition

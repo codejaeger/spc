@@ -36,6 +36,8 @@ class Book(models.Model):
     name = models.CharField(max_length=100)
     created_at = models.DateTimeField(auto_now_add=True)
     md5s = models.CharField(max_length=100,null=True)
+    md5so = models.CharField(max_length=100,null=True)
+    md5se = models.CharField(max_length=100,null=True)
     index = models.FileField(
         upload_to='usrs.BookIndex/bytes/filename/mimetype',
         blank=False, null=True
@@ -77,13 +79,13 @@ class Book(models.Model):
         # if exists(self,'index') and self.exists('index'):
             # return reverse('model_files:book.overwrite')
 
-        delete_file_if_needed(self, 'index')
+        # delete_file_if_needed(self, 'index')
         if not self.pk:  # file is new
             md5 = hashlib.md5()
             for chunk in self.index.chunks():
                 md5.update(chunk)
             self.md5s = md5.hexdigest()
-
+        # encrypted_file =  subprocess.call(['gpg','--yes','--batch','--passphrase="a"','-c',self.index])
 #        delete_file_if_needed(self, 'pages')
         # else:
         # try:
@@ -92,17 +94,29 @@ class Book(models.Model):
         if Book.objects.filter(name=self.name,ownr=self.ownr):
             sd=Book.objects.get(name=self.name,ownr=self.ownr)
 
-                
-            if sd.md5s!=self.md5s:
-                return False
-            else:
+            if self.md5se:
+                sd.delete()
+                super(Book, self).save(*args, **kwargs)
                 return True
-                    # raise ValidationError(self.md5s)
+            else:
+                if sd.md5s!=self.md5s:
+                    return False
+                else:
+                    return True
+                        # raise ValidationError(self.md5s)
                     # return redirect('model_files:book.edit', kwargs={'pk': sd.pk})
         else:
-            super(Book, self).save(*args, **kwargs)
-            return True
-            
+            if self.md5se:
+                if self.md5s == self.md5se :
+                    super(Book, self).save(*args, **kwargs)
+                    return True
+                else:
+                    return False
+            else:
+                super(Book, self).save(*args, **kwargs)
+                return True
+            # super(Book, self).save(*args, **kwargs)
+            # return True
 
     def it(self,k,s):
         self.key=k
