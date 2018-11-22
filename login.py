@@ -2,10 +2,11 @@ import os
 import requests 
 import pickle
 
+print(1)
 u = input("Enter username: ")
 p = input("Enter password: ")
 
-url = 'http://127.0.0.1:8000/login/'
+url = 'http://10.42.0.133:8000/login/'
 
 client = requests.session()
 client.auth = (u,p)
