@@ -1,0 +1,5 @@
+Server Side
+Instructions:
+1. Download required libraries from library file.
+2. Run $(source vvenv/bin/activate)
+3. Run rn.sh in this directory to start server.

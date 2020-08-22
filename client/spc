@@ -1,0 +1,67 @@
+#!/bin/bash
+
+while test $# -gt 0; do
+        case "$1" in
+                help)
+                        # echo "options:"
+                        echo "help-show this help"
+                        echo "login-login to server"	
+                        echo "observe-observe the directory to be synced with server"
+                        exit 0
+                        ;;
+                sync)
+                        shift
+                        python3 ~/client.py
+                        shift
+                        ;;
+                --version)
+                        shift
+                        python3 ~/version.py
+                        shift
+                        ;;
+                status)
+                        shift
+                        python3 ~/status.py
+                        shift
+                        ;;
+                signup)
+                        shift
+                        python3 ~/signupd.py
+                        shift
+                        ;;
+                set-url)
+                        shift
+                        python3 ~/set_url.py
+                        shift
+                        ;;
+                en-de)
+                        shift
+                        if [ $# -ne 1 ];
+                            then
+                            python3 ~/update.py $1 $2
+                        else python3 ~/update.py $1
+                        fi 
+                        shift
+                        ;;
+                server)
+                        shift
+                        python3 ~/server.py
+                        shift
+                        ;;
+                 login)
+                        shift
+                        python3 ~/login.py
+                        shift
+                        ;;
+                 logout)
+                        shift
+                        python3 ~/logout.py
+                        shift
+                        ;;
+                 observe)
+                        shift
+                        python3 ~/observe.py $1
+                        shift
+                        ;;
+        esac
+done

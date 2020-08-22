@@ -1,0 +1,1 @@
+requests  shutil beautifulsoup4 html subprocess hashlib io pyAesCrypt Crypto time pyDes codecs blowfish progressbar Django==2.1 django-formtools>=1.0 django-nose>=1.4 pillow==5.2.0 getpass 

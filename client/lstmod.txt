@@ -1,0 +1,3 @@
+/home/sumitjakhar/sync/ 2018-11-23 23:21:23.698574973 +0530
+/home/sumitjakhar/sync/b.txt 2018-11-23 23:21:05.814575495 +0530
+/home/sumitjakhar/sync/a.txt 2018-11-23 23:21:23.622574975 +0530

@@ -1,0 +1,3 @@
+sudo permissions is required (obviously)
+Open terminal in this directory and run "install_client.sh"
+Libraries required in python are specified in "libraries"
